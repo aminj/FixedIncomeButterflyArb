@@ -6,12 +6,16 @@ clear; close all;
 %draw = csvread('Swap Rates-BB.csv');
 
 Maturities=[2 3 5 7 10]
+
+%this is a comment
+
 Mat_vect=[1 4 7 10 13];
 
 dur_win=3:314;
 whole_input_swap_rates=cell2mat(draw(dur_win,Mat_vect+1));
 
 whole_input_swap_dates=[];
+
 for i = dur_win
     whole_input_swap_dates(i-2)=datenum(cell2mat(draw(i,1)));
 end
@@ -39,3 +43,5 @@ options = optimset('Display', 'iter');
 [param_vasi2, RMSE_vasi2] = fminsearch(@pricingErrors, init_params, options, factors, input_swap_rates, 1/5*ones(1,5), model);
 
 factors=factor_optimization(param_vasi2, input_swap_rates, model);
+
+V=PriceDiff(parameters,  factors, input_swap_rates, model)
