@@ -21,12 +21,25 @@ ThisSwapRate=@(thisdate,thismat) SwapRate(whole_input_swap_rates, Maturities, wh
 
 %plot([2:.1:9],ThisSwapRate(datenum(2004,12,31),[2:.1:9]))
 
+
 this_day=datenum(2004,12,31); %Dec 2004
-
-
 MyPort=portfolio(this_day);
-MyPort.append_swaps(this_day, datenum(2005,12,31), 1000);
-MyPort.append_swaps(this_day, datenum(2006,12,31), -2000);
-MyPort.append_swaps(this_day, datenum(2013,12,31), 1000);
 
-MyPort.evaluate(ThisSwapRate, this_day+90, false)
+swap1_enter_day=this_day;
+swap1_maturity_day=datenum(2005,12,31);
+swap1_position=1000;
+MyPort.append_swaps(swap1_enter_day, swap1_maturity_day, swap1_position);
+
+swap2_enter_day=this_day;
+swap2_maturity_day=datenum(2006,12,31);
+swap2_position=-2000;
+MyPort.append_swaps(swap2_enter_day, swap2_maturity_day, swap2_position);
+
+swap3_enter_day=this_day;
+swap3_maturity_day=datenum(2013,12,31);
+swap3_position=1000;
+MyPort.append_swaps(swap3_enter_day, swap3_maturity_day, swap3_position);
+
+CloseContracts=false;
+EvaluatePortfolioAtDate=addtodate(datenum(2004,12,31), 3 , 'month');
+MyPort.evaluate(ThisSwapRate, EvaluatePortfolioAtDate, CloseContracts)

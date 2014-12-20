@@ -17,13 +17,12 @@ classdef swaps<handle
         end
         
         function out=left_to_maturity(obj, date)
-            DateVec=@(d) datevec(datestr(d));
-            out=DateVec(obj.MaturityDate)-DateVec(date);
+            out=date_diff(date, obj.MaturityDate);
         end
         
         function out=maturity(obj)
             BuyMat=obj.left_to_maturity(obj.ContractDate);
-            out=BuyMat(1)+BuyMat(2)/12;
+            out=BuyMat(1)/12;
         end
         
         function out=rate(obj, ThisSwapRates)
@@ -37,12 +36,12 @@ classdef swaps<handle
             swap_int=swap_freq*12;
             BuyMat=obj.left_to_maturity(obj.ContractDate);
             Rem2Mat=obj.left_to_maturity(SellDate);
-            if mod(Rem2Mat(2), swap_int)==0
+            if mod(Rem2Mat(1), swap_int)==0
 %                 if Rem2Mat(3)==0
                     ZeroMaturity=Rem2Mat;
                     BN=SwapRate2Zero(@(mat) SwapRates(SellDate, mat), ZeroMaturity);
-                    rf_buy=SwapRates(obj.ContractDate, BuyMat(1)+BuyMat(2)/12);
-                    rf_sell=SwapRates(SellDate, Rem2Mat(1)+Rem2Mat(2)/12);
+                    rf_buy=SwapRates(obj.ContractDate, BuyMat(1)/12);
+                    rf_sell=SwapRates(SellDate, Rem2Mat(1)/12);
                     SwapPrice=(1-BN(end))*(rf_buy/rf_sell-1);
 %                 end
             end
