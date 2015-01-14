@@ -2,10 +2,12 @@ classdef portfolio<handle
     properties
         swap_list; %PxN, each column consists of a swap class
         portfolio_value;
+        tag;
     end
     methods
-        function obj=portfolio(ConsDate)
+        function obj=portfolio(ConsDate, mytag)
             obj.swap_list=swaps.empty;
+            obj.tag=mytag;
             portfolio_value{1}={ConsDate 0};
         end
         

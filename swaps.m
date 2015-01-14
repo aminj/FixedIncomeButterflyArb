@@ -36,15 +36,19 @@ classdef swaps<handle
             swap_int=swap_freq*12;
             BuyMat=obj.left_to_maturity(obj.ContractDate);
             Rem2Mat=obj.left_to_maturity(SellDate);
-            if mod(Rem2Mat(1), swap_int)==0
-%                 if Rem2Mat(3)==0
-                    ZeroMaturity=Rem2Mat;
-                    BN=SwapRate2Zero(@(mat) SwapRates(SellDate, mat), ZeroMaturity);
-                    rf_buy=SwapRates(obj.ContractDate, BuyMat(1)/12);
-                    rf_sell=SwapRates(SellDate, Rem2Mat(1)/12);
-                    SwapPrice=(1-BN(end))*(rf_buy/rf_sell-1);
-%                 end
-            end
+            last_LIBOR_date=addtodate(obj.MaturityDate, -ceil(Rem2Mat(1)/swap_int)*swap_int , 'month');
+
+            ZeroMaturity=Rem2Mat;
+            LIBOR=SwapRate2Zero(@(mat) SwapRates(last_LIBOR_date, mat), 3, swap_freq);
+            BN=SwapRate2Zero(@(mat) SwapRates(SellDate, mat), ZeroMaturity, swap_freq);
+            fixed_rate=SwapRates(obj.ContractDate, BuyMat(1)/12);
+            N=length(BN);
+            fixed_leg=sum(fixed_rate./(1+BN).^(1:N))+1/(1+BN(N))^N;
+            floating_leg=(1+LIBOR(2))/BN(1);
+            SwapPrice=floating_leg-fixed_leg;
+%             rf_buy=SwapRates(obj.ContractDate, BuyMat(1)/12);
+%             rf_sell=SwapRates(SellDate, Rem2Mat(1)/12);
+%             SwapPrice=(1-BN(end))*(rf_buy/rf_sell-1);
             out=SwapPrice*obj.Position;
         end
         

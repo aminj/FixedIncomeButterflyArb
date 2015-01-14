@@ -2,7 +2,7 @@ function [RMSE, X, P_XX] = Kalman(params, S, X_init, P_XX_init)
 n = size(S,1);
 M = Vasicek2F(params);
 
-dt = 1/52;
+dt = 1/12;
 CONST = [M.mu1*(1-exp(-M.q1*dt)); M.mu2*(1-exp(-M.q2*dt))];
 F = [exp(-M.q1*dt), 0;
      0,             exp(-M.q2*dt)];
