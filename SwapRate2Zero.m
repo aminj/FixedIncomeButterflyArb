@@ -15,7 +15,6 @@ function Bout=SwapRate2Zero(SwapRates, ZeroMaturity, swap_coupon_freq)
     end
     Z=(1./B).^(1./(1:length(T)))-1;
     Bout=spline([0 T], [0 Z], fliplr(max_mat:-swap_freq:0));
-
 end
 
         
