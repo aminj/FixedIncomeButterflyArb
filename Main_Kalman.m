@@ -28,9 +28,11 @@ ThisSwapRate=@(thisdate,thismat) SwapRate([libor input_swap_rates], [.25 Maturit
 
 D = numel(Maturities);
 
-% window_calibration = 170:278; % Dec 2002 - Dec 2011 (MONTHLY)
-% window_calibration = 735:1205; % Dec 2002 - Dec 2011 (WEEKLY)
-window_calibration = 1101:1257; % Jan 2010 - Dec 2012 (WEEKLY)
+%%% SET WINDOWS %%%
+window_calibration = 1101:1257; % Jan 2010 - Dec 2012
+trading_window = 1258:1353;     % Jan 2013 - Oct 2014
+%%%%%%%%%%%%%%%%%%%
+
 SR_calibration = input_swap_rates(window_calibration,:);
 
 % params_init =[  0.3165
@@ -46,6 +48,13 @@ params_init =[  0.0140
                 0.1676
                 0.0144
                 0.0077  ];  % for Jan 2010 - Dec 2012
+            
+% params_init =[  0.0357
+%                 0.0268
+%                 0.0066
+%                 0.3121
+%                 0.0219
+%                 0.0096  ];  % for Jan 2002 - Dec 2004
     
 % calibration using global optimization & Kalman filter
 if CALIBRATE
@@ -80,9 +89,9 @@ SR_model_calibration = [ModelSwapRate(factors_calibration, 2) ...
                         ModelSwapRate(factors_calibration, 10)];
 
 % start trading out of sample
-begin_trading = window_calibration(end)+1;
-SR_trading = input_swap_rates(begin_trading:end,:);
-libor_trading = libor(begin_trading:end);
+begin_trading = trading_window(1);
+SR_trading = input_swap_rates(trading_window,:);
+libor_trading = libor(trading_window);
 nTradingDays = numel(libor_trading);
 
 factors_trading = zeros(2, nTradingDays);
@@ -116,21 +125,22 @@ if DEVPLOTS
 %     subplot(2,1,2); plot((1:nTradingDays)', 100*(SR_trading(:,5)-SR_model_trading(:,5)), 'r-'); title('10Y: Act-Mdl (bps)');
 
     figure('Color','White');
-    subplot(3,1,1); plot((1:nTradingDays)', 100*(SR_trading(:,2)-SR_model_trading(:,2)), 'r-'); title('3Y: Actual - Model (bps)');
-    subplot(3,1,2); plot((1:nTradingDays)', 100*(SR_trading(:,3)-SR_model_trading(:,3)), 'r-'); title('5Y: Actual - Model (bps)');
-    subplot(3,1,3); plot((1:nTradingDays)', 100*(SR_trading(:,4)-SR_model_trading(:,4)), 'r-'); title('7Y: Actual - Model (bps)');
+%     subplot(3,1,1); plot((1:nTradingDays)', 100*(SR_trading(:,2)-SR_model_trading(:,2)), 'r-'); title('3Y: Actual - Model (bps)');
+%     subplot(3,1,2); 
+    plot((1:nTradingDays)', 100*(SR_trading(:,3)-SR_model_trading(:,3)), 'r-'); title('5Y: Actual - Model (bps)');
+%     subplot(3,1,3); plot((1:nTradingDays)', 100*(SR_trading(:,4)-SR_model_trading(:,4)), 'r-'); title('7Y: Actual - Model (bps)');
 %
 end
 
-thresh_open = 0.10; % trading thresholds
-thresh_close = 0.01;
+thresh_open = 0.15; % trading thresholds
+thresh_close = 0.02;
 
 portfolios= cell(3,1);
 pfo_fly_ind = [2 3 4];
 
 PL_vect=[]; PL_vect_approx=[];
 Cash = 0;
-tcost = .01; % transaction cost: 1bp off of swap rate
+tcost = 0.005; % transaction cost: 0.5bp off of swap rate
 
 for t=1:nTradingDays
     fac = factors_trading(:,t); % today's factors
@@ -164,16 +174,21 @@ for t=1:nTradingDays
             approxPL = approxPL + portfolios{j}.swap_list(3).Position*(approxMtM+approxCarry);
             
             % rebalance if 3 months has passed (and convergence hasn't happened)
-            if months(portfolios{j}.update_date, currentDate) >=3 && abs(deviation) > thresh_close
+            if months(portfolios{j}.update_date, currentDate) >=3 
                 rebal=true;
             end
-        end
-        
-        % cash out portfolio if rebalancing or closing out trade
-        if  rebal || abs(deviation) < thresh_close
-            Cash = Cash+bflyValue;  
-            bflyValue = 0;
-            portfolios{j}={};
+            
+            if rebal || ...  % rebalance 
+               abs(deviation) < thresh_close || ... % within threshold
+               sign(deviation)==-sign(portfolios{j}.swap_list(1).Position)  % overcorrected
+           
+                if abs(deviation) < thresh_close || sign(deviation)==-sign(portfolios{j}.swap_list(1).Position)
+                    rebal = false;
+                end
+            	Cash = Cash+bflyValue;  % cash out portfolio
+                bflyValue = 0;
+                portfolios{j}={};
+            end
         end
         
         % if no active trade & deviation breaches threshold, put one on
@@ -222,9 +237,22 @@ for t=1:nTradingDays
 end
 
 if PNLPLOTS
-    figure('Color','White');
-    plot((1:nTradingDays)', [0 diff(PL_vect)], 'r-', (1:nTradingDays)', PL_vect_approx, 'b-'); title('P&L (actual vs. approx)');
-
-    figure('Color','White');
-    plot((1:nTradingDays)', PL_vect, 'r-'); title('Cumulative P&L (bps)');
+%     figure('Color','White');
+%     plot((1:nTradingDays)', [0 diff(PL_vect)], 'r-', (1:nTradingDays)', PL_vect_approx, 'b-'); title('P&L (actual vs. approx)');
+figure('Color','White');
+plotyy((1:nTradingDays)', 100*(SR_trading(:,2)-SR_model_trading(:,2)), ...
+       (1:nTradingDays)', PL_vect);
+   legend({'5Y (Actual - Model)'; 'P&L'}, 'Location', 'Best');
+   hold on;
+% plot((1:nTradingDays)',100*(SR_trading(:,3)-SR_model_trading(:,3)));
+% plot((1:nTradingDays)',100*(SR_trading(:,4)-SR_model_trading(:,4)));
+plot((1:nTradingDays)',thresh_open*100,'r-');
+plot((1:nTradingDays)',-thresh_open*100,'r-');
+plot((1:nTradingDays)',thresh_close*100,'k-');
+plot((1:nTradingDays)',-thresh_close*100,'k-');
+title('Price Deviations & Cumulative P&L');
+hold off;
+    
+%     
+%     
 end
